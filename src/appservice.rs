@@ -1,4 +1,4 @@
-use ruma_identifiers::ServerName;
+use ruma::identifiers::ServerName;
 
 use url::Url;
 
