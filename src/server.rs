@@ -2,8 +2,8 @@ use std::convert::Infallible;
 use std::future::Future;
 use std::net::ToSocketAddrs;
 
+use ruma::events::AnyEvent;
 use ruma::Raw;
-use ruma_events::AnyEvent;
 
 use bytes::buf::ext::BufExt;
 

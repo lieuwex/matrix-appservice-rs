@@ -1,6 +1,5 @@
-use ruma_identifiers::ServerName;
-
-use url::Url;
+use ruma::api::exports::http::Uri;
+use ruma::identifiers::ServerName;
 
 use serde::{Deserialize, Serialize};
 
@@ -38,7 +37,7 @@ impl Registration {
         id: String,
         namespaces: Namespaces,
         sender_localpart: String,
-        url: Url,
+        url: Uri,
         rate_limited: bool,
     ) -> Self {
         Registration {
@@ -67,7 +66,7 @@ pub struct ApplicationService {
 
 impl ApplicationService {
     /// Create a new ApplicationService struct with the given information.
-    pub fn new(server_name: Box<ServerName>, server_url: Url) -> Self {
+    pub fn new(server_name: Box<ServerName>, server_url: Uri) -> Self {
         Self {
             server_name,
             server_url: server_url.to_string(),
@@ -84,7 +83,7 @@ impl ApplicationService {
         self.server_name.as_ref()
     }
     /// Get a reference to the server url in this ApplicationService instance.
-    pub fn server_url(&self) -> Url {
-        Url::parse(&self.server_url).unwrap()
+    pub fn server_url(&self) -> Uri {
+        self.server_url.parse().unwrap()
     }
 }
