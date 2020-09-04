@@ -1,0 +1,27 @@
+[package]
+name = "matrix-appservice-rs"
+version = "0.1.0"
+authors = ["Lieuwe Rooijakkers <lieuwerooijakkers@gmail.com>"]
+edition = "2018"
+
+# See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
+
+[dependencies]
+ruma = "0.0.1"
+ruma-identifiers = { version = "0.17.4", features = [ "rand" ] }
+ruma-client = { git = "https://github.com/ruma/ruma-client" }
+ruma-appservice-api = "0.2.0-alpha.1"
+ruma-events = "0.22.0-alpha.1"
+ruma-client-api = "0.10.0-alpha.1"
+ruma-api = "0.17.0-alpha.1"
+
+serde = "1.0.114"
+serde_json = "1.0.56"
+serde_yaml = "0.8.13"
+
+hyper = "0.13"
+bytes = "0.5"
+
+url = "2.1.1"
+
+rand = "0.7.3"
