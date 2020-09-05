@@ -1,17 +1,17 @@
 use std::convert::Infallible;
-use std::convert::TryInto;
 use std::future::Future;
 use std::net::ToSocketAddrs;
 
-use ruma::api::appservice::event::push_events;
 use ruma::events::AnyEvent;
 use ruma::Raw;
 
-use bytes::Buf;
+use bytes::buf::ext::BufExt;
 
 use hyper::service::{make_service_fn, service_fn};
 use hyper::{body::aggregate, Body, Request, Response, Server};
 use hyper::{header, StatusCode};
+
+use serde_json::value::to_raw_value;
 
 /// Listen on `addrs` for incoming events, and use the given `handler` to handle those events.
 pub async fn serve<S, F, R>(addrs: S, handler: F) -> Result<(), hyper::Error>
@@ -31,14 +31,24 @@ where
                     // skip "/transactions/"
                     let txn_id = parts.uri.path()[14..].to_string();
 
-                    let json: push_events::v1::IncomingRequest = {
-                        let body = aggregate(body).await.unwrap();
-                        let body = body.bytes().to_vec();
-                        let new_req = Request::builder().method("POST").body(body).unwrap();
-                        new_req.try_into().unwrap()
-                    };
+                    let body = aggregate(body).await.unwrap();
+                    let json: serde_json::Value = serde_json::from_reader(body.reader()).unwrap();
 
-                    match handler(txn_id, json.events).await {
+                    let events: Vec<Raw<AnyEvent>> = json
+                        .as_object()
+                        .unwrap()
+                        .get("events")
+                        .unwrap()
+                        .as_array()
+                        .unwrap()
+                        .into_iter()
+                        .map(|e| {
+                            let raw_value = to_raw_value(e).unwrap();
+                            Raw::from_json(raw_value)
+                        })
+                        .collect();
+
+                    match handler(txn_id, events).await {
                         Err(_) => {} // TODO
                         Ok(_) => {}
                     }
