@@ -4,26 +4,13 @@ use std::hash::Hash;
 
 /// An ID being either a Matrix ID or an external ID for one object.
 #[derive(Debug, Clone, PartialEq, Eq, Hash)]
-pub enum MappingId<E, M>
+pub enum MappingId<'a, E, M>
 where
     E: Clone + Eq + Hash + fmt::Display,
     M: Clone + Eq + Hash + fmt::Display + std::convert::AsRef<str>,
 {
-    External(E),
-    Matrix(M),
-}
-
-impl<E, M> MappingId<E, M>
-where
-    E: Clone + Eq + Hash + fmt::Display,
-    M: Clone + Eq + Hash + fmt::Display + std::convert::AsRef<str>,
-{
-    pub fn into_string(self) -> String {
-        match self {
-            MappingId::External(s) => s.to_string(),
-            MappingId::Matrix(s) => s.to_string(),
-        }
-    }
+    External(&'a E),
+    Matrix(&'a M),
 }
 
 /// Represents an object that has both a Matrix ID and an external ID.
@@ -43,7 +30,8 @@ pub trait Mappable {
 #[derive(Debug, Clone)]
 pub struct MappingDict<V: Mappable> {
     items: Vec<V>,
-    identifier_to_index: HashMap<MappingId<V::ExternalType, V::MatrixType>, usize>,
+    external_to_index: HashMap<V::ExternalType, usize>,
+    matrix_to_index: HashMap<V::MatrixType, usize>,
 }
 
 impl<V> MappingDict<V>
@@ -54,7 +42,8 @@ where
     pub fn new() -> Self {
         Self {
             items: vec![],
-            identifier_to_index: HashMap::new(),
+            external_to_index: HashMap::new(),
+            matrix_to_index: HashMap::new(),
         }
     }
 
@@ -67,7 +56,8 @@ where
     pub fn from_vec(items: Vec<V>) -> Self {
         let mut res = Self {
             items: Vec::with_capacity(items.len()),
-            identifier_to_index: HashMap::with_capacity(items.len() * 2),
+            matrix_to_index: HashMap::with_capacity(items.len()),
+            external_to_index: HashMap::with_capacity(items.len()),
         };
 
         for item in items {
@@ -84,10 +74,10 @@ where
     pub fn insert(&mut self, item: V) -> &mut V {
         let index = self.items.len();
 
-        self.identifier_to_index
-            .insert(MappingId::Matrix((*item.get_matrix()).clone()), index);
-        self.identifier_to_index
-            .insert(MappingId::External((*item.get_external()).clone()), index);
+        self.matrix_to_index
+            .insert((*item.get_matrix()).clone(), index);
+        self.external_to_index
+            .insert((*item.get_external()).clone(), index);
         self.items.push(item);
 
         &mut self.items[index]
@@ -95,8 +85,13 @@ where
 
     /// Returns a reference to the item associated with the given `identifier`, or `None` if no
     /// such item exists.
-    pub fn get(&self, identifier: &MappingId<V::ExternalType, V::MatrixType>) -> Option<&V> {
-        match self.identifier_to_index.get(identifier) {
+    pub fn get(&self, identifier: MappingId<V::ExternalType, V::MatrixType>) -> Option<&V> {
+        let index = match identifier {
+            MappingId::Matrix(m) => self.matrix_to_index.get(m),
+            MappingId::External(e) => self.external_to_index.get(e),
+        };
+
+        match index {
             None => None,
             Some(i) => self.items.get(*i),
         }
@@ -106,9 +101,14 @@ where
     /// if no such item exists.
     pub fn get_mut(
         &mut self,
-        identifier: &MappingId<V::ExternalType, V::MatrixType>,
+        identifier: MappingId<V::ExternalType, V::MatrixType>,
     ) -> Option<&mut V> {
-        match self.identifier_to_index.get(identifier) {
+        let index = match identifier {
+            MappingId::Matrix(m) => self.matrix_to_index.get(m),
+            MappingId::External(e) => self.external_to_index.get(e),
+        };
+
+        match index {
             None => None,
             Some(i) => self.items.get_mut(*i),
         }
@@ -116,22 +116,29 @@ where
 
     /// Returns whether or not this `MappingDict` contains an item associated with the given
     /// `identifier`.
-    pub fn has(&self, identifier: &MappingId<V::ExternalType, V::MatrixType>) -> bool {
-        self.identifier_to_index.contains_key(identifier)
+    pub fn has(&self, identifier: MappingId<V::ExternalType, V::MatrixType>) -> bool {
+        match identifier {
+            MappingId::Matrix(m) => self.matrix_to_index.contains_key(m),
+            MappingId::External(e) => self.external_to_index.contains_key(e),
+        }
     }
 
     /// If this `MappingDict` contains an item associated with the given `identifier`, remove it
     /// and return the value that was contained in the `MappingDict`.
     /// If no such item exists, this function returns `None`.
-    pub fn remove(&mut self, identifier: &MappingId<V::ExternalType, V::MatrixType>) -> Option<V> {
-        if let Some(id) = self.identifier_to_index.remove(identifier) {
+    pub fn remove(&mut self, identifier: MappingId<V::ExternalType, V::MatrixType>) -> Option<V> {
+        let index = match identifier {
+            MappingId::Matrix(m) => self.matrix_to_index.remove(m),
+            MappingId::External(e) => self.external_to_index.remove(e),
+        };
+
+        if let Some(id) = index {
             let item = self.items.remove(id);
 
-            let other_id = match identifier {
-                MappingId::Matrix(_) => MappingId::External(item.get_external().clone()),
-                MappingId::External(_) => MappingId::Matrix(item.get_matrix().clone()),
+            match identifier {
+                MappingId::Matrix(_) => self.external_to_index.remove(item.get_external()),
+                MappingId::External(_) => self.matrix_to_index.remove(item.get_matrix()),
             };
-            self.identifier_to_index.remove(&other_id);
 
             Some(item)
         } else {
