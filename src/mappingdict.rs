@@ -64,6 +64,8 @@ where
             res.insert(item);
         }
 
+        res.shrink_to_fit();
+
         res
     }
 
@@ -154,6 +156,15 @@ where
     /// Get an iterator over mutable references of the items contained in this `MappingDict`.
     pub fn iter_mut<'a>(&'a mut self) -> std::slice::IterMut<'a, V> {
         self.items.iter_mut()
+    }
+
+    /// Shrinks the capacity of the map as much as possible. It will drop down as much as possible
+    /// while maintaining the internal rules and possibly leaving some space in accordance with the
+    /// resize policy.
+    pub fn shrink_to_fit(&mut self) {
+        self.items.shrink_to_fit();
+        self.matrix_to_index.shrink_to_fit();
+        self.external_to_index.shrink_to_fit();
     }
 }
 
