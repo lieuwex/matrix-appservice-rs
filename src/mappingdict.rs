@@ -155,12 +155,12 @@ where
     }
 
     /// Get an iterator over references of the items contained in this `MappingDict`.
-    pub fn iter<'a>(&'a self) -> std::slice::Iter<'a, V> {
+    pub fn iter(&'_ self) -> std::slice::Iter<'_, V> {
         self.items.iter()
     }
 
     /// Get an iterator over mutable references of the items contained in this `MappingDict`.
-    pub fn iter_mut<'a>(&'a mut self) -> std::slice::IterMut<'a, V> {
+    pub fn iter_mut(&'_ mut self) -> std::slice::IterMut<'_, V> {
         self.items.iter_mut()
     }
 
@@ -171,6 +171,12 @@ where
         self.items.shrink_to_fit();
         self.matrix_to_index.shrink_to_fit();
         self.external_to_index.shrink_to_fit();
+    }
+}
+
+impl<T: Mappable> Default for MappingDict<T> {
+    fn default() -> Self {
+        Self::new()
     }
 }
 

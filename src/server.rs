@@ -41,7 +41,7 @@ where
                         .unwrap()
                         .as_array()
                         .unwrap()
-                        .into_iter()
+                        .iter()
                         .map(|e| {
                             let raw_value = to_raw_value(e).unwrap();
                             Raw::from_json(raw_value)

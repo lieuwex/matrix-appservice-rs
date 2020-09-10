@@ -17,8 +17,8 @@ impl<'a> MatrixToItem<'a> {
     pub fn as_url(&self) -> uri::Uri {
         let slug = match self {
             MatrixToItem::Event(room_id, event_id) => format!("{}/{}", room_id, event_id),
-            MatrixToItem::User(user_id) => format!("{}", user_id),
-            MatrixToItem::Group(group_id) => format!("{}", group_id),
+            MatrixToItem::User(user_id) => user_id.to_string(),
+            MatrixToItem::Group(group_id) => group_id.to_string(),
         };
 
         let s = format!("https://matrix.to/#/{}", slug);
