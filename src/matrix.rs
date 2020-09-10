@@ -47,14 +47,14 @@ impl From<uri::InvalidUri> for MxcConversionError {
 /// MXC content.
 pub fn mxc_to_url(
     homeserver_url: &uri::Uri,
-    mxc_url: &uri::Uri,
+    mxc_uri: &uri::Uri,
 ) -> Result<uri::Uri, MxcConversionError> {
-    if mxc_url.scheme_str().unwrap() != "mxc" {
+    if mxc_uri.scheme_str().unwrap() != "mxc" {
         return Err(MxcConversionError::NonMxc);
     }
 
-    let server_name = mxc_url.host().ok_or(MxcConversionError::InvalidMxc)?;
-    let id = &mxc_url.path()[1..];
+    let server_name = mxc_uri.host().ok_or(MxcConversionError::InvalidMxc)?;
+    let id = &mxc_uri.path()[1..];
 
     let res = format!(
         "{}_matrix/media/r0/download/{}/{}",
