@@ -29,8 +29,11 @@ impl<'a> MatrixToItem<'a> {
 /// An error from converting an MXC URI to a HTTP URL.
 #[derive(Debug)]
 pub enum MxcConversionError {
+    /// The given MXC URI isn't actually an MXC URI.
     NonMxc,
+    /// The given MXC URI is malformed.
     InvalidMxc,
+    /// There was an error parsing the resulting URL into an URI object.
     UriParseError(uri::InvalidUri),
 }
 

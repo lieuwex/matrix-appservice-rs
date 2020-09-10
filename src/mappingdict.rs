@@ -9,7 +9,9 @@ where
     E: Clone + Eq + Hash + fmt::Display,
     M: Clone + Eq + Hash + fmt::Display + std::convert::AsRef<str>,
 {
+    /// A refernece to the ID of an external object.
     External(&'a E),
+    /// A refernece to the ID of a Matrix object.
     Matrix(&'a M),
 }
 
@@ -18,9 +20,13 @@ pub trait Mappable {
     type MatrixType: Clone + Eq + Hash + fmt::Display + std::convert::AsRef<str>;
     type ExternalType: Clone + Eq + Hash + fmt::Display;
 
+    /// Get a reference to the Matrix ID of this object.
     fn as_matrix(&self) -> &Self::MatrixType;
+    /// Convert this object into an owned Matrix ID of this object.
     fn into_matrix(self) -> Self::MatrixType;
+    /// Get a reference to the external ID of this object.
     fn as_external(&self) -> &Self::ExternalType;
+    /// Convert this object into an owned external ID of this object.
     fn into_external(self) -> Self::ExternalType;
 }
 
