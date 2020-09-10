@@ -7,8 +7,8 @@ edition = "2018"
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
 
 [dependencies]
-ruma = { git = "https://github.com/ruma/ruma", rev = "a012ad35329471410f7dd0d026f0b0dd18f0d67c", features = [ "client-api" ] }
-ruma-client = { git = "https://github.com/ruma/ruma", rev = "a012ad35329471410f7dd0d026f0b0dd18f0d67c" }
+ruma = { git = "https://github.com/ruma/ruma", rev = "c3a074059f28b47fbeb85112ae5ac4334e8c9a49", features = [ "client-api" ] }
+ruma-client = { git = "https://github.com/ruma/ruma", rev = "c3a074059f28b47fbeb85112ae5ac4334e8c9a49" }
 
 serde = "^1.0"
 serde_json = "^1.0"
