@@ -18,9 +18,9 @@ pub trait Mappable {
     type MatrixType: Clone + Eq + Hash + fmt::Display + std::convert::AsRef<str>;
     type ExternalType: Clone + Eq + Hash + fmt::Display;
 
-    fn get_matrix(&self) -> &Self::MatrixType;
+    fn as_matrix(&self) -> &Self::MatrixType;
     fn into_matrix(self) -> Self::MatrixType;
-    fn get_external(&self) -> &Self::ExternalType;
+    fn as_external(&self) -> &Self::ExternalType;
     fn into_external(self) -> Self::ExternalType;
 }
 
@@ -77,9 +77,9 @@ where
         let index = self.items.len();
 
         self.matrix_to_index
-            .insert((*item.get_matrix()).clone(), index);
+            .insert((*item.as_matrix()).clone(), index);
         self.external_to_index
-            .insert((*item.get_external()).clone(), index);
+            .insert((*item.as_external()).clone(), index);
         self.items.push(item);
 
         &mut self.items[index]
@@ -138,8 +138,8 @@ where
             let item = self.items.remove(id);
 
             match identifier {
-                MappingId::Matrix(_) => self.external_to_index.remove(item.get_external()),
-                MappingId::External(_) => self.matrix_to_index.remove(item.get_matrix()),
+                MappingId::Matrix(_) => self.external_to_index.remove(item.as_external()),
+                MappingId::External(_) => self.matrix_to_index.remove(item.as_matrix()),
             };
 
             Some(item)
