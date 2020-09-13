@@ -1,6 +1,9 @@
 [package]
 name = "matrix-appservice-rs"
+description = "A library to aid in creating Matrix appservices."
 version = "0.1.0"
+license = "MIT"
+repository = "https://github.com/lieuwex/matrix-appservice-rs/"
 authors = ["Lieuwe Rooijakkers <lieuwerooijakkers@gmail.com>"]
 edition = "2018"
 
