@@ -1,13 +1,12 @@
 use std::collections::HashMap;
-use std::fmt;
 use std::hash::Hash;
 
 /// An ID being either a Matrix ID or an external ID for one object.
 #[derive(Debug, Clone, PartialEq, Eq, Hash)]
 pub enum MappingId<'a, E, M>
 where
-    E: Clone + Eq + Hash + fmt::Display,
-    M: Clone + Eq + Hash + fmt::Display + std::convert::AsRef<str>,
+    E: Clone + Eq + Hash,
+    M: Clone + Eq + Hash,
 {
     /// A refernece to the ID of an external object.
     External(&'a E),
@@ -17,8 +16,8 @@ where
 
 /// Represents an object that has both a Matrix ID and an external ID.
 pub trait Mappable {
-    type MatrixType: Clone + Eq + Hash + fmt::Display + std::convert::AsRef<str>;
-    type ExternalType: Clone + Eq + Hash + fmt::Display;
+    type MatrixType: Clone + Eq + Hash;
+    type ExternalType: Clone + Eq + Hash;
 
     /// Get a reference to the Matrix ID of this object.
     fn as_matrix(&self) -> &Self::MatrixType;
