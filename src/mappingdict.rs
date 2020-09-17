@@ -27,6 +27,9 @@ pub trait Mappable {
     fn as_external(&self) -> &Self::ExternalType;
     /// Convert this object into an owned external ID of this object.
     fn into_external(self) -> Self::ExternalType;
+
+    /// Split this object into owned matrix type and external type.
+    fn split(self) -> (Self::MatrixType, Self::ExternalType);
 }
 
 /// A map comparable to a `HashMap` which contains items that are `Mappable`.
