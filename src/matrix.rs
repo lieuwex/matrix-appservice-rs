@@ -13,16 +13,15 @@ pub enum MatrixToItem<'a> {
 }
 
 impl<'a> MatrixToItem<'a> {
-    /// Convert the current `MatrixToItem` into a `uri::Uri`.
-    pub fn as_url(&self) -> uri::Uri {
+    /// Convert the current `MatrixToItem` into a `String`.
+    pub fn to_url_string(&self) -> String {
         let slug = match self {
             MatrixToItem::Event(room_id, event_id) => format!("{}/{}", room_id, event_id),
             MatrixToItem::User(user_id) => user_id.to_string(),
             MatrixToItem::Group(group_id) => group_id.to_string(),
         };
 
-        let s = format!("https://matrix.to/#/{}", slug);
-        s.parse().unwrap()
+        format!("https://matrix.to/#/{}", slug)
     }
 }
 
