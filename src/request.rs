@@ -1,7 +1,7 @@
 use std::collections::BTreeMap;
 
 use ruma::identifiers::UserId;
-use ruma_client::{Error, HttpsClient};
+use ruma_client::{Client, Error};
 
 /// A builder for a request to the Matrix homeserver.
 #[derive(Debug, Clone)]
@@ -9,7 +9,7 @@ pub struct RequestBuilder<'a, R>
 where
     R: ruma::api::OutgoingRequest + std::fmt::Debug,
 {
-    client: &'a HttpsClient,
+    client: &'a Client,
     request: R,
 
     params: BTreeMap<String, String>,
@@ -19,8 +19,8 @@ impl<'a, R> RequestBuilder<'a, R>
 where
     R: ruma::api::OutgoingRequest + std::fmt::Debug,
 {
-    /// Create a new `RequestBuilder`, with the given `HttpsClient` and the given `request`.
-    pub fn new(client: &'a HttpsClient, request: R) -> Self {
+    /// Create a new `RequestBuilder`, with the given `Client` and the given `request`.
+    pub fn new(client: &'a Client, request: R) -> Self {
         Self {
             client,
             request,
