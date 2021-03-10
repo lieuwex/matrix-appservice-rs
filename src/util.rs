@@ -7,6 +7,7 @@ pub fn random_alphanumeric(n_chars: usize) -> String {
     let mut rng = thread_rng();
     std::iter::repeat(())
         .map(|_| rng.sample(Alphanumeric))
+        .map(char::from)
         .take(n_chars)
         .collect()
 }
