@@ -7,8 +7,9 @@ use ruma::serde::Raw;
 
 use bytes::Buf;
 
+use hyper::server::Server;
 use hyper::service::{make_service_fn, service_fn};
-use hyper::{body::aggregate, server::Server, Body, Request, Response};
+use hyper::{body::aggregate, Body, Request, Response};
 use hyper::{header, StatusCode};
 
 use serde_json::value::to_raw_value;
