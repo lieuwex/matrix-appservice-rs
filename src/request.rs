@@ -1,31 +1,35 @@
-use std::collections::BTreeMap;
+use std::collections::HashMap;
 
 use ruma::identifiers::UserId;
-use ruma_client::{Client, Error};
+use ruma_client::{Client, HttpClient, ResponseResult};
+
+use hyper::Uri;
 
 /// A builder for a request to the Matrix homeserver.
 #[derive(Debug, Clone)]
-pub struct RequestBuilder<'a, R>
+pub struct RequestBuilder<'a, C, R>
 where
-    R: ruma::api::OutgoingRequest + std::fmt::Debug,
+    C: HttpClient,
+    R: ruma::api::OutgoingRequest,
 {
-    client: &'a Client,
+    client: &'a Client<C>,
     request: R,
 
-    params: BTreeMap<String, String>,
+    params: HashMap<String, String>,
 }
 
-impl<'a, R> RequestBuilder<'a, R>
+impl<'a, C, R> RequestBuilder<'a, C, R>
 where
-    R: ruma::api::OutgoingRequest + std::fmt::Debug,
+    C: HttpClient,
+    R: ruma::api::OutgoingRequest,
 {
     /// Create a new `RequestBuilder`, with the given `Client` and the given `request`.
-    pub fn new(client: &'a Client, request: R) -> Self {
+    pub fn new(client: &'a Client<C>, request: R) -> Self {
         Self {
             client,
             request,
 
-            params: BTreeMap::new(),
+            params: HashMap::new(),
         }
     }
 
@@ -45,9 +49,34 @@ where
 
     /// Submit the request, waiting on the response.
     /// This will consume the current builder.
-    pub async fn request(self) -> Result<R::IncomingResponse, Error<R::EndpointError>> {
+    pub async fn request(self) -> ResponseResult<C, R> {
+        let mut new_params = String::new();
+        for (i, s) in self
+            .params
+            .into_iter()
+            .map(|(k, v)| format!("{}={}", k, v))
+            .enumerate()
+        {
+            if i > 0 {
+                new_params.push('&');
+            }
+            new_params.push_str(&s);
+        }
+
         self.client
-            .request_with_url_params(self.request, Some(self.params))
+            .send_customized_request(self.request, |req| {
+                let uri = req.uri_mut();
+                let new_path_and_query = match uri.query() {
+                    Some(params) => format!("{}?{}&{}", uri.path(), params, new_params),
+                    None => format!("{}?{}", uri.path(), new_params),
+                };
+
+                let mut parts = uri.clone().into_parts();
+                parts.path_and_query = Some(new_path_and_query.parse()?);
+                *uri = Uri::from_parts(parts)?;
+
+                Ok(())
+            })
             .await
     }
 }

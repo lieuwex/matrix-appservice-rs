@@ -2,7 +2,7 @@ use std::convert::Infallible;
 use std::future::Future;
 use std::net::ToSocketAddrs;
 
-use ruma::events::AnyEvent;
+use ruma::events::AnySyncRoomEvent;
 use ruma::serde::Raw;
 
 use bytes::Buf;
@@ -18,7 +18,7 @@ use serde_json::value::to_raw_value;
 pub async fn serve<S, F, R>(addrs: S, handler: F) -> Result<(), hyper::Error>
 where
     S: ToSocketAddrs,
-    F: Fn(String, Vec<Raw<AnyEvent>>) -> R + Sync + Send + Clone + 'static,
+    F: Fn(String, Vec<Raw<AnySyncRoomEvent>>) -> R + Sync + Send + Clone + 'static,
     R: Future<Output = Result<String, Infallible>> + Send,
 {
     let service = make_service_fn(move |_| {
@@ -35,7 +35,7 @@ where
                     let body = aggregate(body).await.unwrap();
                     let json: serde_json::Value = serde_json::from_reader(body.reader()).unwrap();
 
-                    let events: Vec<Raw<AnyEvent>> = json
+                    let events: Vec<Raw<AnySyncRoomEvent>> = json
                         .as_object()
                         .unwrap()
                         .get("events")
