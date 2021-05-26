@@ -4,6 +4,9 @@ mod matrix;
 mod request;
 mod util;
 
+#[cfg(feature = "convert")]
+pub mod convert;
+
 pub use appservice::*;
 pub use mappingdict::*;
 pub use matrix::*;
