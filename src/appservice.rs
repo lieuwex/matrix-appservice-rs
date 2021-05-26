@@ -3,17 +3,17 @@ use ruma::identifiers::ServerName;
 
 use serde::{Deserialize, Serialize};
 
-use crate::util::random_alphanumeric;
-
 pub use ruma::api::appservice::{Namespace, Namespaces, Registration, RegistrationInit};
 
-pub fn new_registration(
+#[cfg(feature = "rand")]
+pub fn new_registration_rand(
     id: String,
     namespaces: Namespaces,
     sender_localpart: String,
     url: Uri,
     rate_limited: bool,
 ) -> Registration {
+    use crate::util::random_alphanumeric;
     Registration::from(RegistrationInit {
         id,
         as_token: random_alphanumeric(64),
