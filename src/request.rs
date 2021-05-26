@@ -47,6 +47,14 @@ where
         self
     }
 
+    /// Set the `access_token` url parameter, returning the current builder to allow method
+    /// chaining.
+    pub fn access_token(&mut self, access_token: String) -> &mut Self {
+        self.params
+            .insert(String::from("access_token"), access_token);
+        self
+    }
+
     /// Submit the request, waiting on the response.
     /// This will consume the current builder.
     pub async fn request(self) -> ResponseResult<C, R> {
