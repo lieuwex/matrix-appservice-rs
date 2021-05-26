@@ -2,23 +2,22 @@ use std::convert::Infallible;
 use std::future::Future;
 use std::net::ToSocketAddrs;
 
-use ruma::events::AnySyncRoomEvent;
+use hyper::body::to_bytes;
+use ruma::api::appservice::event::push_events;
+use ruma::api::IncomingRequest;
+use ruma::events::AnyRoomEvent;
 use ruma::serde::Raw;
-
-use bytes::Buf;
 
 use hyper::server::Server;
 use hyper::service::{make_service_fn, service_fn};
-use hyper::{body::aggregate, Body, Request, Response};
 use hyper::{header, StatusCode};
-
-use serde_json::value::to_raw_value;
+use hyper::{Body, Request, Response};
 
 /// Listen on `addrs` for incoming events, and use the given `handler` to handle those events.
 pub async fn serve<S, F, R>(addrs: S, handler: F) -> Result<(), hyper::Error>
 where
     S: ToSocketAddrs,
-    F: Fn(String, Vec<Raw<AnySyncRoomEvent>>) -> R + Sync + Send + Clone + 'static,
+    F: Fn(String, Vec<Raw<AnyRoomEvent>>) -> R + Sync + Send + Clone + 'static,
     R: Future<Output = Result<String, Infallible>> + Send,
 {
     let service = make_service_fn(move |_| {
@@ -28,28 +27,11 @@ where
                 let handler = handler.clone();
                 async move {
                     let (parts, body) = req.into_parts();
+                    let body = to_bytes(body).await.unwrap();
+                    let req: Request<&[u8]> = Request::from_parts(parts, &body);
+                    let req = push_events::v1::IncomingRequest::try_from_http_request(req).unwrap();
 
-                    // skip "/transactions/"
-                    let txn_id = parts.uri.path()[14..].to_string();
-
-                    let body = aggregate(body).await.unwrap();
-                    let json: serde_json::Value = serde_json::from_reader(body.reader()).unwrap();
-
-                    let events: Vec<Raw<AnySyncRoomEvent>> = json
-                        .as_object()
-                        .unwrap()
-                        .get("events")
-                        .unwrap()
-                        .as_array()
-                        .unwrap()
-                        .iter()
-                        .map(|e| {
-                            let raw_value = to_raw_value(e).unwrap();
-                            Raw::from_json(raw_value)
-                        })
-                        .collect();
-
-                    match handler(txn_id, events).await {
+                    match handler(req.txn_id, req.events).await {
                         Err(_) => {} // TODO
                         Ok(_) => {}
                     }

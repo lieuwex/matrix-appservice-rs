@@ -1,5 +1,5 @@
 use ruma::api::exports::http::uri;
-use ruma::identifiers::{EventId, RoomId, UserId};
+use ruma::identifiers::{EventId, MxcUri, RoomId, UserId};
 
 /// An item that can be represented using a matrix.to URL.
 #[derive(Debug, Clone, Hash, PartialEq, Eq)]
@@ -28,8 +28,6 @@ impl<'a> MatrixToItem<'a> {
 /// An error from converting an MXC URI to a HTTP URL.
 #[derive(Debug)]
 pub enum MxcConversionError {
-    /// The given MXC URI isn't actually an MXC URI.
-    NonMxc,
     /// The given MXC URI is malformed.
     InvalidMxc,
     /// There was an error parsing the resulting URL into an URI object.
@@ -46,14 +44,9 @@ impl From<uri::InvalidUri> for MxcConversionError {
 /// MXC content.
 pub fn mxc_to_url(
     homeserver_url: &uri::Uri,
-    mxc_uri: &uri::Uri,
+    mxc_uri: &MxcUri,
 ) -> Result<uri::Uri, MxcConversionError> {
-    if mxc_uri.scheme_str().unwrap() != "mxc" {
-        return Err(MxcConversionError::NonMxc);
-    }
-
-    let server_name = mxc_uri.host().ok_or(MxcConversionError::InvalidMxc)?;
-    let id = &mxc_uri.path()[1..];
+    let (server_name, id) = mxc_uri.parts().ok_or(MxcConversionError::InvalidMxc)?;
 
     let res = format!(
         "{}_matrix/media/r0/download/{}/{}",

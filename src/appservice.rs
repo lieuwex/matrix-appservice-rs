@@ -5,56 +5,25 @@ use serde::{Deserialize, Serialize};
 
 use crate::util::random_alphanumeric;
 
-/// A namespace defined by an application service.
-#[derive(Clone, Debug, Serialize, Deserialize)]
-pub struct Namespace {
-    pub exclusive: bool,
-    pub regex: String, // REVIEW
-}
+pub use ruma::api::appservice::{Namespace, Namespaces, Registration, RegistrationInit};
 
-/// Namespaces defined by an application service.
-#[derive(Clone, Debug, Serialize, Deserialize)]
-pub struct Namespaces {
-    pub users: Vec<Namespace>,
-    pub aliases: Vec<Namespace>,
-}
-
-/// Information required in the registration yaml file that a homeserver needs.
-#[derive(Clone, Debug, Serialize, Deserialize)]
-pub struct Registration {
-    pub id: String,
-    pub as_token: String,
-    pub hs_token: String,
-    pub namespaces: Namespaces,
-    pub url: String, // REVIEW
-    pub sender_localpart: String,
-    pub rate_limited: bool,
-}
-
-impl Registration {
-    /// Create a new Registration with the given options and random tokens.
-    pub fn new(
-        id: String,
-        namespaces: Namespaces,
-        sender_localpart: String,
-        url: Uri,
-        rate_limited: bool,
-    ) -> Self {
-        Registration {
-            id,
-            as_token: random_alphanumeric(64),
-            hs_token: random_alphanumeric(64),
-            namespaces,
-            url: url.to_string(),
-            sender_localpart,
-            rate_limited,
-        }
-    }
-
-    /// Create a registration from the given yaml value.
-    pub fn from_yaml(value: serde_yaml::Value) -> Result<Self, serde_yaml::Error> {
-        serde_yaml::from_value(value)
-    }
+pub fn new_registration(
+    id: String,
+    namespaces: Namespaces,
+    sender_localpart: String,
+    url: Uri,
+    rate_limited: bool,
+) -> Registration {
+    Registration::from(RegistrationInit {
+        id,
+        as_token: random_alphanumeric(64),
+        hs_token: random_alphanumeric(64),
+        namespaces,
+        url: url.to_string(),
+        sender_localpart,
+        rate_limited: Some(rate_limited),
+        protocols: None,
+    })
 }
 
 /// A struct containing information required by an application service.
@@ -71,11 +40,6 @@ impl ApplicationService {
             server_name,
             server_url: server_url.to_string(),
         }
-    }
-
-    /// Create a new ApplicationService struct from the given yaml value.
-    pub fn from_yaml(value: serde_yaml::Value) -> Result<Self, serde_yaml::Error> {
-        serde_yaml::from_value(value)
     }
 
     /// Get a reference to the server name in this ApplicationService instance.
