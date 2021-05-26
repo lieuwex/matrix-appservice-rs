@@ -72,8 +72,6 @@ where
             res.insert(item);
         }
 
-        res.shrink_to_fit();
-
         res
     }
 
