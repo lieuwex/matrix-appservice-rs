@@ -10,7 +10,8 @@ edition = "2018"
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
 
 [features]
-convert = [ "html_parser", "regex", "pcre2" ]
+default = [ "convert", "serve" ]
+convert = [ "lol_html", "regex", "pcre2" ]
 serve = [ "hyper/server", "hyper/http1", "hyper/tcp", "bytes" ]
 
 [dependencies]
@@ -25,8 +26,6 @@ bytes = { version = "1", optional = true }
 
 rand = { version = "0.8", optional = true }
 
-#html_parser = { version = "0.4.2", optional = true }
-#html_parser = { path = "../html-parser/", optional = true }
-html_parser = { git = "https://github.com/lieuwex/html-parser", rev = "2be8d7ab4b7530cc861a4641a1b231c37876b540", optional = true }
+lol_html = { version = "0.3.0", optional = true }
 regex = { version = "1", optional = true }
 pcre2 = { version = "0.2.3", optional = true }

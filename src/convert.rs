@@ -1,14 +1,19 @@
 pub mod to_external {
+    use std::borrow::Cow;
     use std::collections::HashMap;
     use std::convert::TryFrom;
 
+    use lol_html::rewrite_str;
     use ruma::identifiers::{RoomAliasId, UserId};
 
-    pub use html_parser::{Dom, Element, Node};
+    pub use lol_html::{
+        html_content::{ContentType, Element},
+        ElementContentHandlers, Settings,
+    };
 
     type UserMapper<'a> = &'a dyn Fn(UserId, &Info) -> Option<String>;
     type RoomMapper<'a> = &'a dyn Fn(RoomAliasId, &Info) -> Option<String>;
-    type ElementClosure<'a> = &'a dyn Fn(Element, &Info) -> String;
+    type ElementClosure<'a> = &'a dyn Fn(&mut Element<'_, '_>, &Info);
 
     pub struct Info<'a> {
         user_mapper: UserMapper<'a>,
@@ -62,31 +67,23 @@ pub mod to_external {
         }
     }
 
-    pub fn stringify_children(el: Element, info: &Info) -> String {
-        // fold_first would be nice here
-        el.children
-            .into_iter()
-            .map(|c| stringify_matrix_node(c, info))
-            .fold(String::new(), |a, b| a + &b)
-    }
+    fn stringify_a_tag(el: &mut Element, info: &Info) {
+        let normal = |el: &mut Element, url: Option<String>| match info.element_handlers.get("a") {
+            Some(f) => {
+                f(el, info);
+            }
+            None => {
+                el.remove_and_keep_content();
 
-    fn stringify_a_tag(el: Element, info: &Info) -> String {
-        let normal = |el: Element, url: Option<String>| -> String {
-            match info.element_handlers.get("a") {
-                Some(f) => f(el, info),
-                None => {
-                    let stringified = stringify_children(el, info);
-
-                    match url {
-                        Some(url) => format!("[{}]({})", stringified, url),
-                        None => stringified,
-                    }
+                if let Some(url) = url {
+                    el.prepend("[", ContentType::Html);
+                    el.append(&format!("]({})", url), ContentType::Html);
                 }
             }
         };
 
-        let href = match el.attributes.get("href").cloned() {
-            Some(Some(href)) => href,
+        let href = match el.get_attribute("href") {
+            Some(href) => href,
             _ => return normal(el, None),
         };
 
@@ -108,37 +105,45 @@ pub mod to_external {
         };
 
         if let Some(s) = s {
-            s
+            el.replace(&s, ContentType::Html)
         } else {
             normal(el, Some(href))
         }
     }
 
-    fn stringify_matrix_node(node: Node, info: &Info) -> String {
-        match node {
-            Node::Comment(_) => String::new(),
-            Node::Text(text) => text,
-            Node::Element(el) => match el.name.as_str() {
-                "a" => stringify_a_tag(el, info),
-                elem => match info.element_handlers.get(elem) {
-                    Some(f) => f(el, info),
-                    None => stringify_children(el, info),
-                },
-            },
-        }
-    }
-
     pub fn convert(s: &str, info: &Info) -> Result<String, &'static str> {
-        let dom = Dom::parse(s).map_err(|e| {
-            eprintln!("{:?}", e);
-            "failing to parse DOM"
-        })?;
+        let mut settings = Settings::default();
 
-        let mut res = String::new();
-        for child in dom.children {
-            res += &stringify_matrix_node(child, info);
-        }
-        Ok(res.trim().to_string())
+        settings.element_content_handlers = vec![
+            ((
+                Cow::Owned("body".parse().unwrap()),
+                ElementContentHandlers::default().comments(|c| {
+                    c.remove();
+                    Ok(())
+                }),
+            )),
+            ((
+                Cow::Owned("a".parse().unwrap()),
+                ElementContentHandlers::default().element(|e| {
+                    stringify_a_tag(e, info);
+                    Ok(())
+                }),
+            )),
+            ((
+                Cow::Owned("*".parse().unwrap()),
+                ElementContentHandlers::default().element(|e| {
+                    let tag = e.tag_name();
+                    if let Some(handler) = info.element_handlers.get(&tag) {
+                        handler(e, info);
+                    } else {
+                        e.remove_and_keep_content();
+                    }
+                    Ok(())
+                }),
+            )),
+        ];
+
+        Ok(rewrite_str(s, settings).unwrap())
     }
 
     #[cfg(test)]
@@ -146,9 +151,10 @@ pub mod to_external {
         use std::collections::HashMap;
         use std::convert::TryFrom;
 
+        use lol_html::html_content::ContentType;
         use ruma::identifiers::{user_id, RoomAliasId, UserId};
 
-        use crate::convert::to_external::{convert, stringify_children, Element, Info};
+        use crate::convert::to_external::{convert, Element, Info};
 
         #[test]
         fn test_stripping() {
@@ -216,8 +222,8 @@ pub mod to_external {
         #[test]
         fn test_element_handlers() {
             let mut info = Info::new();
-            info.add_element_handler("a".to_string(), &|_: Element, _: &Info| -> String {
-                "test".to_string()
+            info.add_element_handler("a".to_string(), &|el: &mut Element<'_, '_>, _: &Info| {
+                el.replace("test", ContentType::Html);
             });
 
             let before = "<a href=\"google.nl\">this will be gone</a>";
@@ -233,17 +239,23 @@ pub mod to_external {
 
             let mut info = Info::new();
 
-            info.add_element_handler("mx-reply".to_string(), &|_: Element, _: &Info| -> String {
-                String::new()
+            info.add_element_handler(
+                "mx-reply".to_string(),
+                &|el: &mut Element<'_, '_>, _: &Info| el.remove(),
+            );
+            info.add_element_handler("em".to_string(), &|el: &mut Element<'_, '_>, _: &Info| {
+                el.prepend("*", lol_html::html_content::ContentType::Html);
+                el.remove_and_keep_content();
+                el.append("*", lol_html::html_content::ContentType::Html);
             });
-            info.add_element_handler("em".to_string(), &|el: Element, inf: &Info| {
-                let s = stringify_children(el, inf);
-                format!("*{}*", s)
-            });
-            info.add_element_handler("strong".to_string(), &|el: Element, inf: &Info| {
-                let s = stringify_children(el, inf);
-                format!("**{}**", s)
-            });
+            info.add_element_handler(
+                "strong".to_string(),
+                &|el: &mut Element<'_, '_>, _: &Info| {
+                    el.prepend("**", lol_html::html_content::ContentType::Html);
+                    el.remove_and_keep_content();
+                    el.append("**", lol_html::html_content::ContentType::Html);
+                },
+            );
 
             let mut user_mapping: HashMap<UserId, String> = HashMap::new();
             user_mapping.insert(user_id!("@tomsg_tom:lieuwe.xyz"), "tom".to_string());
