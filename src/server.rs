@@ -2,16 +2,17 @@ use std::convert::Infallible;
 use std::future::Future;
 use std::net::ToSocketAddrs;
 
-use hyper::body::to_bytes;
-use ruma::api::appservice::event::push_events;
-use ruma::api::IncomingRequest;
 use ruma::events::AnyRoomEvent;
 use ruma::serde::Raw;
 
 use hyper::server::Server;
 use hyper::service::{make_service_fn, service_fn};
-use hyper::{header, StatusCode};
-use hyper::{Body, Request, Response};
+use hyper::{
+    body::{aggregate, Buf},
+    header, Body, Request, Response, StatusCode,
+};
+
+use serde_json::value::to_raw_value;
 
 /// Listen on `addrs` for incoming events, and use the given `handler` to handle those events.
 pub async fn serve<S, F, R>(addrs: S, handler: F) -> Result<(), hyper::Error>
@@ -27,11 +28,28 @@ where
                 let handler = handler.clone();
                 async move {
                     let (parts, body) = req.into_parts();
-                    let body = to_bytes(body).await.unwrap();
-                    let req: Request<&[u8]> = Request::from_parts(parts, &body);
-                    let req = push_events::v1::IncomingRequest::try_from_http_request(req).unwrap();
 
-                    match handler(req.txn_id, req.events).await {
+                    // skip "/transactions/"
+                    let txn_id = parts.uri.path()[14..].to_string();
+
+                    let body = aggregate(body).await.unwrap();
+                    let json: serde_json::Value = serde_json::from_reader(body.reader()).unwrap();
+
+                    let events: Vec<Raw<AnyRoomEvent>> = json
+                        .as_object()
+                        .unwrap()
+                        .get("events")
+                        .unwrap()
+                        .as_array()
+                        .unwrap()
+                        .iter()
+                        .map(|e| {
+                            let raw_value = to_raw_value(e).unwrap();
+                            Raw::from_json(raw_value)
+                        })
+                        .collect();
+
+                    match handler(txn_id, events).await {
                         Err(_) => {} // TODO
                         Ok(_) => {}
                     }
